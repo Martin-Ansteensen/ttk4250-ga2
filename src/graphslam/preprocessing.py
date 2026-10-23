@@ -52,8 +52,13 @@ def relative_pose(
     gtsam.Pose2
         The relative pose increment over the interval.
     """
+    
+    vb = vel_encoder / (1 - car.H/car.L * np.tan(steer))
+    w = vb / car.L * np.tan(steer)
+    psi = np.array([vb, 0, w])
+    return gtsam.Pose2.Expmap(psi*dt)
     # TODO(a): build the body twist and integrate it over dt with the exponential map.
-    raise NotImplementedError("Task 1 (a)")
+    #raise NotImplementedError("Task 1 (a)")
 
 
 # ---------------------------------------------------------------------------
