@@ -87,7 +87,18 @@ def preintegrate(
         Its covariance.
     """
     # TODO(b): compound the increments and propagate the covariance.
-    raise NotImplementedError("Task 1 (b)")
+
+    H1 = np.zeros((3, 3), order="F")
+    H2 = np.zeros((3, 3), order="F")
+    pose = gtsam.Pose2(0,0,0)
+
+    if len(poses) == 0:
+        return pose, np.zeros((3, 3))
+    else:
+        pose, covariance = preintegrate(poses[:-1], covariances[:-1])
+        pose = pose.compose(poses[-1], H1, H2)
+        covariance = H1 @ covariance @ H1.T + H2 @ covariances[-1] @ H2.T
+        return pose, covariance
 
 
 # ---------------------------------------------------------------------------
