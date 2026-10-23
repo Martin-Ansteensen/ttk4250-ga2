@@ -67,7 +67,7 @@ def predict_pose(previous_pose: gtsam.Pose2, relative_pose: gtsam.Pose2) -> gtsa
         The predicted pose x_k.
     """
     # TODO(c1): compose the relative pose onto the previous pose.
-    raise NotImplementedError("Task 1 (c1)")
+    return previous_pose.compose(relative_pose)
 
 
 def add_odometry_factor(
@@ -91,7 +91,7 @@ def add_odometry_factor(
         Covariance of that increment, in the tangent space of ``relative_pose``.
     """
     # TODO(c2): add a BetweenFactorPose2 with a full-covariance Gaussian noise model.
-    raise NotImplementedError("Task 1 (c2)")
+    graph.add(gtsam.BetweenFactorPose2(key_previous, key_current, relative_pose, gtsam.noiseModel.Gaussian.Covariance(relative_pose_cov)))
 
 
 def add_landmark_factor(
@@ -116,7 +116,7 @@ def add_landmark_factor(
         From :func:`bearing_range_noise_model`, ordered [bearing, range].
     """
     # TODO(c3): add a BearingRangeFactor2D. Mind the argument order.
-    raise NotImplementedError("Task 1 (c3)")
+    graph.add(gtsam.BearingRangeFactor2D(pose_key, landmark_key, gtsam.Rot2(measurement[1]), measurement[0], noise_model))
 
 
 # ---------------------------------------------------------------------------
@@ -147,7 +147,19 @@ def predict_measurement(
         d z / d m_j.
     """
     # TODO(d): predict [range, bearing] and stack the two rows of each Jacobian.
-    raise NotImplementedError("Task 1 (d)")
+    H_range_pose = np.zeros((1, 3), order="F")
+    H_range_landmark = np.zeros((1, 2), order="F")
+    H_bearing_pose = np.zeros((1, 3), order="F")
+    H_bearing_landmark = np.zeros((1, 2), order="F")
+
+    z_range = pose.range(landmark, H_range_pose, H_range_landmark)
+    z_bearing = pose.bearing(landmark, H_bearing_pose, H_bearing_landmark).theta()
+    z = np.array([z_range, z_bearing])
+
+    H_pose = np.vstack((H_range_pose, H_bearing_pose))
+    H_landmark = np.vstack((H_range_landmark, H_bearing_landmark))
+
+    return z, H_pose, H_landmark
 
 
 def inverse_measurement(pose: gtsam.Pose2, measurement: np.ndarray) -> np.ndarray:
@@ -195,7 +207,20 @@ def assemble_joint_covariance(
         P, whose block (i, j) is the covariance between ``keys[i]`` and ``keys[j]``.
     """
     # TODO(e): fill P block by block from joint_marginal.at(key_i, key_j).
-    raise NotImplementedError("Task 1 (e)")
+    n = len(keys) - 1 # number of landmarks
+    P = np.zeros((3 + 2 * n, 3 + 2 * n), order="F")
+
+    y = 0
+    for q in range(len(keys)):
+        x = 0
+        for r in range(len(keys)):
+            block = joint_marginal.at(keys[q], keys[r])
+            sizey, sizex = block.shape
+            P[y : y + sizey, x : x + sizex] = block
+            x += sizex
+        y += sizey
+
+    return P
 
 
 # ---------------------------------------------------------------------------
