@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 
 import gtsam
 import numpy as np
+import scipy as scp
 
 from graphslam.config import SlamConfig
 
@@ -253,6 +254,13 @@ def innovation_covariance(
     np.ndarray, shape=(2n, 2n)
         The innovation covariance ``S``.
     """
+    if not (jacobians_pose or jacobians_landmark):
+        return np.zeros((0,0))
+    Hx = np.vstack(jacobians_pose)
+    Hm = scp.linalg.block_diag(*jacobians_landmark)
+    H =  np.hstack([Hx, Hm])
+    R =  np.kron(np.eye(len(jacobians_pose)), measurement_cov)
+    return H @ joint_covariance @ H.T + R
     # TODO(f): build the stacked H, build the block-diagonal R, and form S.
     raise NotImplementedError("Task 1 (f)")
 
